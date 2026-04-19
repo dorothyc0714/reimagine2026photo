@@ -143,8 +143,9 @@ async function main() {
       id: stableId,
       category,
       title: fields?.title || fields?.Title || attachment.name || "",
-      original: `/${originalRel}`,
-      thumb: `/${thumbRel}`,
+      // IMPORTANT: Use relative paths so GitHub Pages subpaths work
+      original: `./${originalRel}`,
+      thumb: `./${thumbRel}`,
       width,
       height,
       is_portrait: isPortrait,
