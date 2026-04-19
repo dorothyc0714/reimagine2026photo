@@ -80,6 +80,22 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       .card.landscape { grid-row: span 1; }
       .card.portrait { grid-row: span 2; }
       .card img { width:100%; height:100%; display:block; background:#111; object-fit: cover; }
+      .card .zoomhint {
+        position:absolute;
+        inset:0;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        pointer-events:none;
+        background: rgba(0,0,0,.22);
+        color: rgba(255,255,255,.92);
+        font-size: 34px;
+        letter-spacing: 1px;
+      }
+      @media (hover: hover) and (pointer: fine) {
+        .card:hover .zoomhint { display:flex; }
+        .card:hover img { cursor: zoom-in; }
+      }
       .card .cap { position:absolute; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:flex-end; gap:10px; padding: 10px 10px; background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0)); }
       .cap .btn {
         font-size:12px;
@@ -97,10 +113,12 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       }
       .cap .btn:hover { background: rgba(2,6,23,.96); border-color: rgba(255,255,255,.24); }
       .cap .btn svg { width: 14px; height: 14px; display:block; opacity: .95; }
-      dialog { border:1px solid rgba(255,255,255,.18); border-radius: 16px; padding:0; background:#0b0d12; color:#e7e9ee; width:min(92vw, 980px); }
+      dialog { border:1px solid rgba(255,255,255,.18); border-radius: 16px; padding:0; background:#0b0d12; color:#e7e9ee; width:min(92vw, 980px); max-height: 92vh; overflow: hidden; }
       dialog::backdrop { background: rgba(0,0,0,.72); }
       .dlg-img { width:100%; height:auto; display:block; background:#111; }
-      .dlg-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,.10); }
+      dialog[open] { display: flex; flex-direction: column; }
+      .dlg-img { flex: 1 1 auto; width: 100%; height: auto; max-height: calc(92vh - 56px); object-fit: contain; }
+      .dlg-bar { flex: 0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,.10); }
       .dlg-title { font-size:13px; opacity:.9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .dlg-actions { display:flex; gap:8px; flex:0 0 auto; }
       .dlg-actions a, .dlg-actions button {
@@ -118,6 +136,42 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       }
       .dlg-actions a svg { width: 14px; height: 14px; display:block; opacity:.95; }
       .dlg-actions a:hover, .dlg-actions button:hover { background: rgba(255,255,255,.10); }
+      .navzone {
+        position: absolute;
+        top: 0;
+        bottom: 56px;
+        width: 24%;
+        cursor: pointer;
+        user-select: none;
+        display:flex;
+        align-items:center;
+      }
+      .navzone.left { left: 0; }
+      .navzone.left { justify-content:flex-start; padding-left: 10px; }
+      .navzone.right { right: 0; }
+      .navzone.right { justify-content:flex-end; padding-right: 10px; }
+      .navbtn {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(2,6,23,.70);
+        color: rgba(255,255,255,.92);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow: 0 10px 26px rgba(0,0,0,.25);
+        backdrop-filter: blur(8px);
+        opacity: .0;
+        transform: translateY(0) scale(.98);
+        transition: opacity .15s ease, transform .15s ease, background .15s ease;
+      }
+      .navbtn svg { width: 18px; height: 18px; display:block; }
+      dialog:hover .navbtn { opacity: 1; transform: scale(1); }
+      .navzone:active .navbtn { background: rgba(2,6,23,.86); }
+      @media (hover: none) {
+        .navbtn { opacity: 1; }
+      }
     </style>
   </head>
   <body>
@@ -139,6 +193,20 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
     </div>
 
     <dialog id="dlg">
+      <div class="navzone left" id="navPrev" aria-label="Previous photo">
+        <div class="navbtn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="navzone right" id="navNext" aria-label="Next photo">
+        <div class="navbtn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
       <img class="dlg-img" id="dlgImg" alt="" />
       <div class="dlg-bar">
         <div class="dlg-title" id="dlgTitle"></div>
@@ -164,9 +232,13 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       const dlgTitle = $("#dlgTitle");
       const dlgDownload = $("#dlgDownload");
       const dlgClose = $("#dlgClose");
+      const navPrev = $("#navPrev");
+      const navNext = $("#navNext");
 
       let all = null;
       let active = "All photos";
+      let currentList = [];
+      let currentIndex = -1;
 
       function setActive(cat) {
         active = cat;
@@ -176,11 +248,22 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         renderGrid();
       }
 
-      function openDialog(p) {
+      function showAt(idx) {
+        if (!currentList.length) return;
+        const n = currentList.length;
+        currentIndex = ((idx % n) + n) % n;
+        const p = currentList[currentIndex];
         dlgImg.src = p.original;
         dlgTitle.textContent = "";
         dlgDownload.href = p.original;
         dlgDownload.download = (p.title || p.id || "photo") + ".jpg";
+      }
+
+      function openDialog(p) {
+        // When opening, use current filtered order.
+        currentList = all.photos.filter((x) => active === "All photos" ? true : x.category === active);
+        currentIndex = Math.max(0, currentList.findIndex((x) => x.id === p.id));
+        showAt(currentIndex);
         dlg.showModal();
       }
 
@@ -189,6 +272,14 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         const r = dlg.getBoundingClientRect();
         const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
         if (!inside) dlg.close();
+      });
+      navPrev.addEventListener("click", () => showAt(currentIndex - 1));
+      navNext.addEventListener("click", () => showAt(currentIndex + 1));
+      window.addEventListener("keydown", (e) => {
+        if (!dlg.open) return;
+        if (e.key === "ArrowLeft") { e.preventDefault(); showAt(currentIndex - 1); }
+        if (e.key === "ArrowRight") { e.preventDefault(); showAt(currentIndex + 1); }
+        if (e.key === "Escape") { dlg.close(); }
       });
 
       function renderTabs(categories) {
@@ -223,6 +314,10 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
           img.src = p.thumb;
           img.alt = "";
           img.addEventListener("click", () => openDialog(p));
+          const hint = document.createElement("div");
+          hint.className = "zoomhint";
+          hint.setAttribute("aria-hidden", "true");
+          hint.textContent = "🔍";
           const cap = document.createElement("div");
           cap.className = "cap";
           const a = document.createElement("a");
@@ -238,6 +333,7 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
           \`;
           cap.appendChild(a);
           card.appendChild(img);
+          card.appendChild(hint);
           card.appendChild(cap);
           gridEl.appendChild(card);
         }
