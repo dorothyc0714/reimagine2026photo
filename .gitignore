@@ -1,6 +1,7 @@
 .env
 .cache
 node_modules
+.DS_Store
 
 # Generated build outputs (CI will generate and deploy)
 public/index.html

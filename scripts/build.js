@@ -38,10 +38,7 @@ function renderIndex({ title = "Conference Photos" } = {}) {
       .nav img { height: 27px; width:auto; display:block; }
       .banner {
         width: 100%;
-        border-radius: 14px;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,.12);
-        background: rgba(255,255,255,.04);
+        margin-bottom: 24px;
       }
       .banner img { width: 100%; height: auto; display: block; }
       .top { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
@@ -114,7 +111,7 @@ function renderIndex({ title = "Conference Photos" } = {}) {
         </a>
       </div>
       <div class="banner" role="img" aria-label="Reimagine 2026 banner">
-        <img src="./assets/banner.png?v=${Date.now()}" alt="Reimagine 2026" />
+        <img src="./assets/banner.jpg?v=${Date.now()}" alt="Reimagine 2026" />
       </div>
       <div class="layout">
         <div class="sidebar">
