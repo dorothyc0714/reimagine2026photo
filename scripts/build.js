@@ -21,19 +21,22 @@ function htmlEscape(s) {
     .replaceAll("'", "&#39;");
 }
 
-function renderIndex({ title = "Conference Photos" } = {}) {
+function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${htmlEscape(title)}</title>
+    <link rel="icon" type="image/png" href="./assets/favicon.png" />
+    <link rel="apple-touch-icon" href="./assets/favicon.png" />
+    <meta property="og:title" content="${htmlEscape(title)}" />
     <style>
       :root { color-scheme: light; }
       body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:#0b0d12; color:#e7e9ee; }
       a { color: inherit; }
       .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 14px 56px; }
-      .nav { display:flex; align-items:center; justify-content:flex-start; margin-bottom: 10px; }
+      .nav { display:flex; align-items:center; justify-content:flex-start; margin-bottom: 16px; }
       .nav a { display:flex; align-items:center; gap:10px; }
       .nav img { height: 27px; width:auto; display:block; }
       .banner {
@@ -41,12 +44,19 @@ function renderIndex({ title = "Conference Photos" } = {}) {
         margin-bottom: 24px;
         line-height: 0;
         font-size: 0;
+        overflow: hidden;
+        border-radius: 14px;
+        background: #0b0d12;
       }
       .banner img { 
         width: 100%; 
-        height: auto; 
+        height: 100%;
         display: block; 
         vertical-align: middle;
+        object-fit: cover;
+        /* Avoid 1px hairlines from subpixel scaling */
+        transform: translateZ(0) scale(1.01);
+        transform-origin: center;
       }
       .top { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
       h1 { margin:0; font-size:18px; font-weight:700; letter-spacing: .2px; }
@@ -118,7 +128,7 @@ function renderIndex({ title = "Conference Photos" } = {}) {
         </a>
       </div>
       <div class="banner" role="img" aria-label="Reimagine 2026 banner">
-        <img src="./assets/banner.jpg?v=${Date.now()}" alt="Reimagine 2026" />
+        <img src="./assets/banner.png?v=${Date.now()}" alt="Reimagine 2026" />
       </div>
       <div class="layout">
         <div class="sidebar">
@@ -250,7 +260,7 @@ function renderIndex({ title = "Conference Photos" } = {}) {
 function main() {
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   const photos = mustReadJson(path.join(PUBLIC_DIR, "photos.json"));
-  const title = process.env.SITE_TITLE || "Conference Photos";
+  const title = process.env.SITE_TITLE || "Reimagine 2026 Photo";
   fs.writeFileSync(INDEX_HTML, renderIndex({ title }), "utf8");
   console.log(`Built public/index.html (photos=${photos.photos?.length || 0})`);
 }

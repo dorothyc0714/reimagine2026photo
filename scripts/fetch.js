@@ -8,13 +8,38 @@ import { larkApi } from "./lark.js";
 loadDotEnv();
 
 const BITABLE_APP_TOKEN = mustGetEnv("BITABLE_APP_TOKEN");
-const BITABLE_TABLE_ID = mustGetEnv("BITABLE_TABLE_ID");
 const PHOTO_FIELD = mustGetEnv("BITABLE_PHOTO_FIELD");
-const CATEGORY_FIELD = mustGetEnv("BITABLE_CATEGORY_FIELD");
+const CATEGORY_FIELD = process.env.BITABLE_CATEGORY_FIELD || "";
 const CATEGORIES = (process.env.CATEGORIES || "Foyer,First session,Room 1,Room 2")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+// Support either:
+// - single table: BITABLE_TABLE_ID=tblxxx (legacy)
+// - multi tables: BITABLE_TABLES="Foyer=tbl...,First session=tbl...,Room 1=tbl...,Room 2=tbl..."
+function parseTablesEnv() {
+  const tablesRaw = (process.env.BITABLE_TABLES || "").trim();
+  if (tablesRaw) {
+    const pairs = tablesRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((kv) => {
+        const eq = kv.indexOf("=");
+        if (eq === -1) return null;
+        const name = kv.slice(0, eq).trim();
+        const id = kv.slice(eq + 1).trim();
+        return name && id ? { name, id } : null;
+      })
+      .filter(Boolean);
+    if (pairs.length) return pairs;
+  }
+
+  const legacyId = (process.env.BITABLE_TABLE_ID || "").trim();
+  if (!legacyId) throw new Error("Missing env: BITABLE_TABLE_ID (or BITABLE_TABLES)");
+  return [{ name: "All photos", id: legacyId }];
+}
 
 const OUT_PUBLIC_DIR = path.resolve(process.cwd(), "public");
 const OUT_ORIGINAL_DIR = path.join(OUT_PUBLIC_DIR, "photos", "original");
@@ -35,12 +60,12 @@ function sha1(s) {
   return crypto.createHash("sha1").update(s).digest("hex");
 }
 
-async function listAllRecords() {
+async function listAllRecords(tableId) {
   const records = [];
   let pageToken = undefined;
   for (;;) {
     const { json } = await larkApi(
-      `/open-apis/bitable/v1/apps/${BITABLE_APP_TOKEN}/tables/${BITABLE_TABLE_ID}/records/search`,
+      `/open-apis/bitable/v1/apps/${BITABLE_APP_TOKEN}/tables/${tableId}/records/search`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
@@ -76,7 +101,8 @@ async function makeThumb(originalPath, thumbPath) {
     .toFile(thumbPath);
 }
 
-function pickCategory(fields) {
+function pickCategoryFromField(fields) {
+  if (!CATEGORY_FIELD) return null;
   const raw = fields?.[CATEGORY_FIELD];
   const val = Array.isArray(raw) ? raw[0] : raw;
   const text =
@@ -104,20 +130,25 @@ async function main() {
   ensureDir(OUT_THUMB_DIR);
   ensureDir(OUT_META_DIR);
 
-  const records = await listAllRecords();
+  const tables = parseTablesEnv();
+  const allRecords = [];
+  for (const t of tables) {
+    const recs = await listAllRecords(t.id);
+    for (const r of recs) allRecords.push({ ...r, __table_name: t.name, __table_id: t.id });
+  }
 
   const out = {
     generated_at: new Date().toISOString(),
-    categories: [...CATEGORIES],
+    categories: tables.length > 1 ? tables.map((t) => t.name) : [...CATEGORIES],
     photos: []
   };
 
-  for (const r of records) {
+  for (const r of allRecords) {
     const recordId = r?.record_id;
     const fields = r?.fields || {};
     const attachment = getFirstAttachment(fields);
     if (!recordId || !attachment) continue;
-    const category = pickCategory(fields);
+    const category = tables.length > 1 ? r.__table_name : pickCategoryFromField(fields);
     if (!category) continue;
 
     const fileToken = attachment.file_token;
@@ -159,7 +190,7 @@ async function main() {
   );
 
   fs.writeFileSync(path.join(OUT_PUBLIC_DIR, "photos.json"), JSON.stringify(out, null, 2), "utf8");
-  fs.writeFileSync(path.join(OUT_META_DIR, "records.raw.json"), JSON.stringify(records, null, 2), "utf8");
+  fs.writeFileSync(path.join(OUT_META_DIR, "records.raw.json"), JSON.stringify(allRecords, null, 2), "utf8");
 
   console.log(`Fetched ${out.photos.length} photos. Output: public/photos.json`);
 }
