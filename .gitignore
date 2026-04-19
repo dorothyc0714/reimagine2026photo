@@ -1,0 +1,9 @@
+.env
+.cache
+node_modules
+
+# Generated build outputs (CI will generate and deploy)
+public/index.html
+public/photos.json
+public/photos/
+

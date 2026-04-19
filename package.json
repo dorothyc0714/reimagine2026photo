@@ -1,0 +1,14 @@
+{
+  "name": "conference-photos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "node scripts/fetch.js",
+    "build": "node scripts/build.js",
+    "dev": "node scripts/serve.js"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  }
+}
+
