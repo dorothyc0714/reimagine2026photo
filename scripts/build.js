@@ -39,8 +39,15 @@ function renderIndex({ title = "Conference Photos" } = {}) {
       .banner {
         width: 100%;
         margin-bottom: 24px;
+        line-height: 0;
+        font-size: 0;
       }
-      .banner img { width: 100%; height: auto; display: block; }
+      .banner img { 
+        width: 100%; 
+        height: auto; 
+        display: block; 
+        vertical-align: middle;
+      }
       .top { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
       h1 { margin:0; font-size:18px; font-weight:700; letter-spacing: .2px; }
       .layout { display:flex; gap: 14px; margin-top: 14px; align-items:flex-start; }
