@@ -62,6 +62,7 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       h1 { margin:0; font-size:18px; font-weight:700; letter-spacing: .2px; }
       .layout { display:flex; gap: 14px; margin-top: 14px; align-items:flex-start; }
       .sidebar { width: 220px; flex: 0 0 auto; position: sticky; top: 14px; align-self: flex-start; }
+      .main { flex: 1 1 auto; min-width: 0; display:flex; flex-direction: column; gap: 10px; }
       .tabs { display:flex; gap:8px; flex-wrap:wrap; }
       .tabs.vertical { flex-direction: column; gap:10px; }
       .tab { border:1px solid rgba(255,255,255,.20); color:#ffffff; background: rgba(255,255,255,.07); padding:8px 10px; border-radius:999px; cursor:pointer; font-size:13px; }
@@ -73,9 +74,45 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
         .layout { flex-direction: column; }
-        .sidebar { width: 100%; position: static; top: auto; }
+        .sidebar {
+          width: 100%;
+          position: sticky;
+          top: 0;
+          z-index: 30;
+          padding-top: 8px;
+          padding-bottom: 8px;
+          margin: 0 -2px;
+          background: rgba(11,13,18,.78);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255,255,255,.10);
+        }
         .tabs.vertical { flex-direction: row; flex-wrap: wrap; }
+        .pager-desktop { display: none; }
+        .pager-mobile { display: flex; }
       }
+      .pager {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        padding: 8px 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 14px;
+        background: rgba(255,255,255,.05);
+      }
+      .pager .info { font-size: 12px; color: rgba(255,255,255,.78); white-space: nowrap; }
+      .pager .controls { display:flex; gap:8px; align-items:center; }
+      .pager button {
+        font-size: 12px;
+        padding: 7px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(255,255,255,.06);
+        color: #fff;
+        cursor: pointer;
+      }
+      .pager button:disabled { opacity: .35; cursor: not-allowed; }
+      .pager-mobile { display: none; }
       .card { border-radius: 14px; overflow: hidden; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); position: relative; height: 100%; }
       .card.landscape { grid-row: span 1; }
       .card.portrait { grid-row: span 2; }
@@ -187,8 +224,24 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       <div class="layout">
         <div class="sidebar">
           <div class="tabs vertical" id="tabs"></div>
+          <div class="pager pager-desktop" id="pagerDesktop" aria-label="Pagination">
+            <div class="info" id="pagerInfoDesktop"></div>
+            <div class="controls">
+              <button type="button" id="pagerPrevDesktop">Prev</button>
+              <button type="button" id="pagerNextDesktop">Next</button>
+            </div>
+          </div>
         </div>
-        <div class="grid" id="grid"></div>
+        <div class="main">
+          <div class="pager pager-mobile" id="pagerMobile" aria-label="Pagination">
+            <div class="info" id="pagerInfoMobile"></div>
+            <div class="controls">
+              <button type="button" id="pagerPrevMobile">Prev</button>
+              <button type="button" id="pagerNextMobile">Next</button>
+            </div>
+          </div>
+          <div class="grid" id="grid"></div>
+        </div>
       </div>
     </div>
 
@@ -227,6 +280,12 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       const $ = (s) => document.querySelector(s);
       const tabsEl = $("#tabs");
       const gridEl = $("#grid");
+      const pagerInfoDesktop = $("#pagerInfoDesktop");
+      const pagerInfoMobile = $("#pagerInfoMobile");
+      const pagerPrevDesktop = $("#pagerPrevDesktop");
+      const pagerNextDesktop = $("#pagerNextDesktop");
+      const pagerPrevMobile = $("#pagerPrevMobile");
+      const pagerNextMobile = $("#pagerNextMobile");
       const dlg = $("#dlg");
       const dlgImg = $("#dlgImg");
       const dlgTitle = $("#dlgTitle");
@@ -239,9 +298,12 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       let active = "All photos";
       let currentList = [];
       let currentIndex = -1;
+      const PAGE_SIZE = 24;
+      let page = 0;
 
       function setActive(cat) {
         active = cat;
+        page = 0;
         for (const b of tabsEl.querySelectorAll("button")) {
           b.setAttribute("aria-pressed", b.dataset.cat === cat ? "true" : "false");
         }
@@ -301,11 +363,45 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         }
       }
 
+      function renderPager(total) {
+        const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (page >= pages) page = 0;
+        const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
+        const end = Math.min(total, (page + 1) * PAGE_SIZE);
+        const text = total === 0 ? "0 photos" : \`Showing \${start}-\${end} of \${total} · Page \${page + 1}/\${pages}\`;
+        pagerInfoDesktop.textContent = text;
+        pagerInfoMobile.textContent = text;
+        const atStart = page <= 0;
+        const atEnd = page >= pages - 1 || total === 0;
+        pagerPrevDesktop.disabled = atStart;
+        pagerNextDesktop.disabled = atEnd;
+        pagerPrevMobile.disabled = atStart;
+        pagerNextMobile.disabled = atEnd;
+      }
+
+      function goPage(delta) {
+        if (!all) return;
+        const total = all.photos.filter((p) => active === "All photos" ? true : p.category === active).length;
+        const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        page = Math.min(Math.max(0, page + delta), pages - 1);
+        renderGrid();
+        if (!dlg.open) {
+          gridEl.scrollIntoView({ block: "start", behavior: "smooth" });
+        }
+      }
+
+      pagerPrevDesktop.addEventListener("click", () => goPage(-1));
+      pagerNextDesktop.addEventListener("click", () => goPage(1));
+      pagerPrevMobile.addEventListener("click", () => goPage(-1));
+      pagerNextMobile.addEventListener("click", () => goPage(1));
+
       function renderGrid() {
         if (!all) return;
         const photos = all.photos.filter((p) => active === "All photos" ? true : p.category === active);
+        renderPager(photos.length);
+        const slice = photos.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
         gridEl.innerHTML = "";
-        for (const p of photos) {
+        for (const p of slice) {
           const card = document.createElement("div");
           card.className = "card " + (p.is_portrait ? "portrait" : "landscape");
           const img = document.createElement("img");
