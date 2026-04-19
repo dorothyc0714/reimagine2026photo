@@ -32,13 +32,46 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
     <link rel="apple-touch-icon" href="./assets/favicon.png" />
     <meta property="og:title" content="${htmlEscape(title)}" />
     <style>
-      :root { color-scheme: light; }
+      :root {
+        color-scheme: light;
+        --nav-h: 34px;
+        --nav-gap: 8px;
+        /* Painted height of sticky nav (padding + row + border); use for tab bar offset on mobile */
+        --nav-bar-outer: calc(6px + var(--nav-h) + 6px + 1px);
+      }
       body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:#0b0d12; color:#e7e9ee; }
       a { color: inherit; }
-      .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 14px 56px; }
-      .nav { display:flex; align-items:center; justify-content:flex-start; margin-bottom: 16px; }
+      /* Nav outside .wrap: mobile WebKit often breaks sticky when the bar sits inside max-width + negative margin hacks */
+      .site { padding-top: 20px; }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 0 14px 56px; }
+      .nav {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0 0 10px;
+        padding: 6px 0;
+        height: calc(var(--nav-h) + 12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11,13,18,.72);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      .nav-inner {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+      }
       .nav a { display:flex; align-items:center; gap:10px; }
-      .nav img { height: 27px; width:auto; display:block; }
+      .nav img { height: 20px; width:auto; display:block; }
       .banner {
         width: 100%;
         margin-bottom: 24px;
@@ -61,7 +94,7 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       .top { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
       h1 { margin:0; font-size:18px; font-weight:700; letter-spacing: .2px; }
       .layout { display:flex; gap: 14px; margin-top: 14px; align-items:flex-start; }
-      .sidebar { width: 220px; flex: 0 0 auto; position: sticky; top: 14px; align-self: flex-start; }
+      .sidebar { width: 220px; flex: 0 0 auto; position: sticky; top: calc(var(--nav-h) + var(--nav-gap) + 20px); align-self: flex-start; }
       .main { flex: 1 1 auto; min-width: 0; display:flex; flex-direction: column; gap: 10px; }
       .tabs { display:flex; gap:8px; flex-wrap:wrap; }
       .tabs.vertical { flex-direction: column; gap:10px; }
@@ -73,46 +106,25 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       @media (min-width: 720px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; grid-auto-rows: 170px; } }
       @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
+        .nav { margin-bottom: 0; }
         .layout { flex-direction: column; }
         .sidebar {
           width: 100%;
           position: sticky;
-          top: 0;
+          /* Overlap 1px to avoid subpixel seam between two sticky layers */
+          top: calc(var(--nav-bar-outer) - 1px);
           z-index: 30;
-          padding-top: 8px;
+          padding-top: 0;
           padding-bottom: 8px;
-          margin: 0 -2px;
+          padding-left: 14px;
+          padding-right: 14px;
+          margin: 0 -14px;
           background: rgba(11,13,18,.78);
           backdrop-filter: blur(10px);
           border-bottom: 1px solid rgba(255,255,255,.10);
         }
         .tabs.vertical { flex-direction: row; flex-wrap: wrap; }
-        .pager-desktop { display: none; }
-        .pager-mobile { display: flex; }
       }
-      .pager {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:10px;
-        padding: 8px 10px;
-        border: 1px solid rgba(255,255,255,.12);
-        border-radius: 14px;
-        background: rgba(255,255,255,.05);
-      }
-      .pager .info { font-size: 12px; color: rgba(255,255,255,.78); white-space: nowrap; }
-      .pager .controls { display:flex; gap:8px; align-items:center; }
-      .pager button {
-        font-size: 12px;
-        padding: 7px 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,.16);
-        background: rgba(255,255,255,.06);
-        color: #fff;
-        cursor: pointer;
-      }
-      .pager button:disabled { opacity: .35; cursor: not-allowed; }
-      .pager-mobile { display: none; }
       .card { border-radius: 14px; overflow: hidden; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); position: relative; height: 100%; }
       .card.landscape { grid-row: span 1; }
       .card.portrait { grid-row: span 2; }
@@ -150,7 +162,22 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       }
       .cap .btn:hover { background: rgba(2,6,23,.96); border-color: rgba(255,255,255,.24); }
       .cap .btn svg { width: 14px; height: 14px; display:block; opacity: .95; }
-      dialog { border:1px solid rgba(255,255,255,.18); border-radius: 16px; padding:0; background:#0b0d12; color:#e7e9ee; width:min(92vw, 980px); max-height: 92vh; overflow: hidden; }
+      /* Use fixed + translate centering (more reliable on mobile than margin:auto on <dialog>) */
+      dialog {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        border:1px solid rgba(255,255,255,.18);
+        border-radius: 16px;
+        padding:0;
+        background:#0b0d12;
+        color:#e7e9ee;
+        width: min(92vw, 980px);
+        max-height: 92vh;
+        overflow: hidden;
+      }
       dialog::backdrop { background: rgba(0,0,0,.72); }
       .dlg-img { width:100%; height:auto; display:block; background:#111; }
       dialog[open] { display: flex; flex-direction: column; }
@@ -212,37 +239,27 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <div class="nav">
+    <div class="site">
+    <header class="nav" role="banner">
+      <div class="nav-inner">
         <a href="https://www.larksuite.com" target="_blank" rel="noopener noreferrer" aria-label="Go to Lark website">
           <img src="./assets/lark-logo.png" alt="Lark" />
         </a>
       </div>
+    </header>
+    <div class="wrap">
       <div class="banner" role="img" aria-label="Reimagine 2026 banner">
         <img src="./assets/banner.png?v=${Date.now()}" alt="Reimagine 2026" />
       </div>
       <div class="layout">
         <div class="sidebar">
           <div class="tabs vertical" id="tabs"></div>
-          <div class="pager pager-desktop" id="pagerDesktop" aria-label="Pagination">
-            <div class="info" id="pagerInfoDesktop"></div>
-            <div class="controls">
-              <button type="button" id="pagerPrevDesktop">Prev</button>
-              <button type="button" id="pagerNextDesktop">Next</button>
-            </div>
-          </div>
         </div>
         <div class="main">
-          <div class="pager pager-mobile" id="pagerMobile" aria-label="Pagination">
-            <div class="info" id="pagerInfoMobile"></div>
-            <div class="controls">
-              <button type="button" id="pagerPrevMobile">Prev</button>
-              <button type="button" id="pagerNextMobile">Next</button>
-            </div>
-          </div>
           <div class="grid" id="grid"></div>
         </div>
       </div>
+    </div>
     </div>
 
     <dialog id="dlg">
@@ -280,12 +297,6 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       const $ = (s) => document.querySelector(s);
       const tabsEl = $("#tabs");
       const gridEl = $("#grid");
-      const pagerInfoDesktop = $("#pagerInfoDesktop");
-      const pagerInfoMobile = $("#pagerInfoMobile");
-      const pagerPrevDesktop = $("#pagerPrevDesktop");
-      const pagerNextDesktop = $("#pagerNextDesktop");
-      const pagerPrevMobile = $("#pagerPrevMobile");
-      const pagerNextMobile = $("#pagerNextMobile");
       const dlg = $("#dlg");
       const dlgImg = $("#dlgImg");
       const dlgTitle = $("#dlgTitle");
@@ -298,12 +309,8 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       let active = "All photos";
       let currentList = [];
       let currentIndex = -1;
-      const PAGE_SIZE = 24;
-      let page = 0;
-
       function setActive(cat) {
         active = cat;
-        page = 0;
         for (const b of tabsEl.querySelectorAll("button")) {
           b.setAttribute("aria-pressed", b.dataset.cat === cat ? "true" : "false");
         }
@@ -363,50 +370,17 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         }
       }
 
-      function renderPager(total) {
-        const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        if (page >= pages) page = 0;
-        const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-        const end = Math.min(total, (page + 1) * PAGE_SIZE);
-        const text = total === 0 ? "0 photos" : \`Showing \${start}-\${end} of \${total} · Page \${page + 1}/\${pages}\`;
-        pagerInfoDesktop.textContent = text;
-        pagerInfoMobile.textContent = text;
-        const atStart = page <= 0;
-        const atEnd = page >= pages - 1 || total === 0;
-        pagerPrevDesktop.disabled = atStart;
-        pagerNextDesktop.disabled = atEnd;
-        pagerPrevMobile.disabled = atStart;
-        pagerNextMobile.disabled = atEnd;
-      }
-
-      function goPage(delta) {
-        if (!all) return;
-        const total = all.photos.filter((p) => active === "All photos" ? true : p.category === active).length;
-        const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        page = Math.min(Math.max(0, page + delta), pages - 1);
-        renderGrid();
-        if (!dlg.open) {
-          gridEl.scrollIntoView({ block: "start", behavior: "smooth" });
-        }
-      }
-
-      pagerPrevDesktop.addEventListener("click", () => goPage(-1));
-      pagerNextDesktop.addEventListener("click", () => goPage(1));
-      pagerPrevMobile.addEventListener("click", () => goPage(-1));
-      pagerNextMobile.addEventListener("click", () => goPage(1));
-
       function renderGrid() {
         if (!all) return;
         const photos = all.photos.filter((p) => active === "All photos" ? true : p.category === active);
-        renderPager(photos.length);
-        const slice = photos.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
         gridEl.innerHTML = "";
-        for (const p of slice) {
+        for (const p of photos) {
           const card = document.createElement("div");
           card.className = "card " + (p.is_portrait ? "portrait" : "landscape");
           const img = document.createElement("img");
           img.loading = "lazy";
           img.decoding = "async";
+          img.fetchPriority = "low";
           img.src = p.thumb;
           img.alt = "";
           img.addEventListener("click", () => openDialog(p));
