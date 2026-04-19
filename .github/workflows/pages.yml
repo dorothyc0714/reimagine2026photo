@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -29,15 +31,19 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Fetch from Lark Base
+      - name: Create .env from GitHub Secret
         env:
-          LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
-          LARK_APP_SECRET: ${{ secrets.LARK_APP_SECRET }}
-          BITABLE_APP_TOKEN: ${{ secrets.BITABLE_APP_TOKEN }}
-          BITABLE_TABLE_ID: ${{ secrets.BITABLE_TABLE_ID }}
-          BITABLE_PHOTO_FIELD: ${{ secrets.BITABLE_PHOTO_FIELD }}
-          BITABLE_CATEGORY_FIELD: ${{ secrets.BITABLE_CATEGORY_FIELD }}
-          CATEGORIES: ${{ secrets.CATEGORIES }}
+          REIMAGINE: ${{ secrets.REIMAGINE }}
+        run: |
+          if [ -z "$REIMAGINE" ]; then
+            echo "Missing secret: REIMAGINE"
+            echo "Please create a repository secret named REIMAGINE with lines like KEY=value (same as your local .env)."
+            exit 1
+          fi
+          # Write without leaking to logs
+          printf "%s" "$REIMAGINE" > .env
+
+      - name: Fetch from Lark Base
         run: npm run fetch
 
       - name: Build static site
