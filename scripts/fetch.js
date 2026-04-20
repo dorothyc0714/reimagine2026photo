@@ -10,12 +10,13 @@ loadDotEnv();
 const BITABLE_APP_TOKEN = mustGetEnv("BITABLE_APP_TOKEN");
 const PHOTO_FIELD = mustGetEnv("BITABLE_PHOTO_FIELD");
 const CATEGORY_FIELD = process.env.BITABLE_CATEGORY_FIELD || "";
-const CATEGORIES = (process.env.CATEGORIES || "Foyer,First session,Room 1 - Ops track,Room 2 - Tech track")
+const CATEGORIES = (process.env.CATEGORIES || "Foyer,Main session,Room 1 - Ops track,Room 2 - Tech track")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
 const CATEGORY_RENAMES = new Map([
+  ["First session", "Main session"],
   ["Room 1", "Room 1 - Ops track"],
   ["Room 2", "Room 2 - Tech track"]
 ]);
@@ -27,7 +28,7 @@ function normalizeCategoryName(name) {
 
 // Support either:
 // - single table: BITABLE_TABLE_ID=tblxxx (legacy)
-// - multi tables: BITABLE_TABLES="Foyer=tbl...,First session=tbl...,Room 1=tbl...,Room 2=tbl..."
+// - multi tables: BITABLE_TABLES="Foyer=tbl...,Main session=tbl...,Room 1=tbl...,Room 2=tbl..."
 function parseTablesEnv() {
   const tablesRaw = (process.env.BITABLE_TABLES || "").trim();
   if (tablesRaw) {
@@ -123,7 +124,8 @@ function pickCategoryFromField(fields) {
         : "";
   const trimmed = text.trim();
   if (!trimmed) return null;
-  return CATEGORIES.includes(trimmed) ? trimmed : null;
+  const normalized = normalizeCategoryName(trimmed);
+  return CATEGORIES.includes(normalized) ? normalized : null;
 }
 
 function getFirstAttachment(fields) {
