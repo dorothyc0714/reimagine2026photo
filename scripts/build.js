@@ -103,6 +103,8 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       .tab[aria-pressed="true"] { background: rgba(99,102,241,.72); border-color: rgba(99,102,241,.95); box-shadow: 0 8px 22px rgba(99,102,241,.22); }
       .meta { opacity:.75; font-size:12px; }
       .grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1 1 auto; align-content: start; grid-auto-rows: 150px; }
+      /* When switching tabs, scrollIntoView should not hide under sticky bars */
+      #grid { scroll-margin-top: calc(var(--nav-h) + var(--nav-gap) + 24px); }
       @media (min-width: 720px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; grid-auto-rows: 170px; } }
       @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
@@ -124,6 +126,7 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
           border-bottom: 1px solid rgba(255,255,255,.10);
         }
         .tabs.vertical { flex-direction: row; flex-wrap: wrap; }
+        #grid { scroll-margin-top: calc(var(--nav-bar-outer) + 12px); }
       }
       .card { border-radius: 14px; overflow: hidden; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); position: relative; height: 100%; }
       .card.landscape { grid-row: span 1; }
@@ -304,6 +307,7 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       const dlgClose = $("#dlgClose");
       const navPrev = $("#navPrev");
       const navNext = $("#navNext");
+      const PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
       let all = null;
       let active = "All photos";
@@ -315,6 +319,10 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
           b.setAttribute("aria-pressed", b.dataset.cat === cat ? "true" : "false");
         }
         renderGrid();
+        // Always jump back to the start of the photo wall on tab switch
+        requestAnimationFrame(() => {
+          gridEl.scrollIntoView({ block: "start", behavior: "smooth" });
+        });
       }
 
       function showAt(idx) {
@@ -370,6 +378,18 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         }
       }
 
+      const io = ("IntersectionObserver" in window)
+        ? new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            const img = e.target;
+            const src = img.dataset.src;
+            if (src) img.src = src;
+            io.unobserve(img);
+          }
+        }, { rootMargin: "600px 0px" })
+        : null;
+
       function renderGrid() {
         if (!all) return;
         const photos = all.photos.filter((p) => active === "All photos" ? true : p.category === active);
@@ -381,9 +401,11 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
           img.loading = "lazy";
           img.decoding = "async";
           img.fetchPriority = "low";
-          img.src = p.thumb;
+          img.src = PLACEHOLDER_SRC;
+          img.dataset.src = p.thumb;
           img.alt = "";
           img.addEventListener("click", () => openDialog(p));
+          if (io) io.observe(img); else img.src = p.thumb;
           const hint = document.createElement("div");
           hint.className = "zoomhint";
           hint.setAttribute("aria-hidden", "true");

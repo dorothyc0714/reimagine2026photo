@@ -12,11 +12,16 @@ export async function getTenantAccessToken() {
   const now = Date.now();
   if (cachedTenantToken && now < cachedTenantTokenExpireAtMs - 60_000) return cachedTenantToken;
 
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.LARK_HTTP_TIMEOUT_MS || 60_000);
+  const t = setTimeout(() => controller.abort(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs);
   const res = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ app_id: LARK_APP_ID, app_secret: LARK_APP_SECRET })
+    body: JSON.stringify({ app_id: LARK_APP_ID, app_secret: LARK_APP_SECRET }),
+    signal: controller.signal
   });
+  clearTimeout(t);
   const json = await res.json();
   if (!res.ok || json?.code !== 0) {
     throw new Error(`Tenant token error: http=${res.status} body=${JSON.stringify(json)}`);
@@ -37,14 +42,19 @@ export async function larkApi(path, { method = "GET", headers = {}, query, body 
     }
   }
 
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.LARK_HTTP_TIMEOUT_MS || 60_000);
+  const t = setTimeout(() => controller.abort(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs);
   const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       ...headers
     },
-    body
+    body,
+    signal: controller.signal
   });
+  clearTimeout(t);
 
   // Some endpoints return binary.
   const ct = res.headers.get("content-type") || "";
