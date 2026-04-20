@@ -313,16 +313,19 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
       let active = "All photos";
       let currentList = [];
       let currentIndex = -1;
-      function setActive(cat) {
+      let didInit = false;
+      function setActive(cat, { scrollToGrid = true } = {}) {
         active = cat;
         for (const b of tabsEl.querySelectorAll("button")) {
           b.setAttribute("aria-pressed", b.dataset.cat === cat ? "true" : "false");
         }
         renderGrid();
-        // Always jump back to the start of the photo wall on tab switch
-        requestAnimationFrame(() => {
-          gridEl.scrollIntoView({ block: "start", behavior: "smooth" });
-        });
+        // Only jump back when user switches tabs (not on first page load).
+        if (scrollToGrid && didInit) {
+          requestAnimationFrame(() => {
+            gridEl.scrollIntoView({ block: "start", behavior: "smooth" });
+          });
+        }
       }
 
       function showAt(idx) {
@@ -435,7 +438,8 @@ function renderIndex({ title = "Reimagine 2026 Photo" } = {}) {
         const res = await fetch("./photos.json", { cache: "no-cache" });
         all = await res.json();
         renderTabs(all.categories || []);
-        setActive("All photos");
+        setActive("All photos", { scrollToGrid: false });
+        didInit = true;
       }
       main().catch((e) => {
         console.error(e);
