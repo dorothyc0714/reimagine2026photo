@@ -15,6 +15,16 @@ const CATEGORIES = (process.env.CATEGORIES || "Foyer,First session,Room 1 - Ops 
   .map((s) => s.trim())
   .filter(Boolean);
 
+const CATEGORY_RENAMES = new Map([
+  ["Room 1", "Room 1 - Ops track"],
+  ["Room 2", "Room 2 - Tech track"]
+]);
+
+function normalizeCategoryName(name) {
+  const trimmed = String(name || "").trim();
+  return CATEGORY_RENAMES.get(trimmed) || trimmed;
+}
+
 // Support either:
 // - single table: BITABLE_TABLE_ID=tblxxx (legacy)
 // - multi tables: BITABLE_TABLES="Foyer=tbl...,First session=tbl...,Room 1=tbl...,Room 2=tbl..."
@@ -30,7 +40,7 @@ function parseTablesEnv() {
         if (eq === -1) return null;
         const name = kv.slice(0, eq).trim();
         const id = kv.slice(eq + 1).trim();
-        return name && id ? { name, id } : null;
+        return name && id ? { name: normalizeCategoryName(name), id } : null;
       })
       .filter(Boolean);
     if (pairs.length) return pairs;
@@ -139,7 +149,7 @@ async function main() {
 
   const out = {
     generated_at: new Date().toISOString(),
-    categories: tables.length > 1 ? tables.map((t) => t.name) : [...CATEGORIES],
+    categories: tables.length > 1 ? tables.map((t) => normalizeCategoryName(t.name)) : [...CATEGORIES],
     photos: []
   };
 
@@ -148,7 +158,7 @@ async function main() {
     const fields = r?.fields || {};
     const attachment = getFirstAttachment(fields);
     if (!recordId || !attachment) continue;
-    const category = tables.length > 1 ? r.__table_name : pickCategoryFromField(fields);
+    const category = tables.length > 1 ? normalizeCategoryName(r.__table_name) : pickCategoryFromField(fields);
     if (!category) continue;
 
     const fileToken = attachment.file_token;
