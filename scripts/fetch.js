@@ -10,7 +10,7 @@ loadDotEnv();
 const BITABLE_APP_TOKEN = mustGetEnv("BITABLE_APP_TOKEN");
 const PHOTO_FIELD = mustGetEnv("BITABLE_PHOTO_FIELD");
 const CATEGORY_FIELD = process.env.BITABLE_CATEGORY_FIELD || "";
-const CATEGORIES = (process.env.CATEGORIES || "Foyer,First session,Room 1,Room 2")
+const CATEGORIES = (process.env.CATEGORIES || "Foyer,First session,Room 1 - Ops track,Room 2 - Tech track")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
